@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="CardTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2015-02-23T01:26:24" hostname="skylight" time="0.0070">
+  <properties/>
+  <testcase name="testCardConstructor" classname="CardTest" time="0.0"/>
+  <testcase name="testCardValueOutOfRange" classname="CardTest" time="0.0"/>
+  <testcase name="testCardToString" classname="CardTest" time="0.0050"/>
+  <testcase name="testCardEqualsAndHash" classname="CardTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

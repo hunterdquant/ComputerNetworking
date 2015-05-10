@@ -1,0 +1,67 @@
+//************************************************************\\
+*                                                              *
+*                       Hunter Quant                           *
+*         Hunter Quant's Prefix Expression Protocol            *
+*                           HQPEP                              *
+*                                                              *
+\\************************************************************//
+
+//************************************************************\\
+
+The client processes user input and determines what type of
+message will be sent to the server. The messages that can be 
+sent to the server are as follows.
+
+//**************        User Commands       ******************\\
+
+   !exit - Sends termination message to server then terminates.
+
+ !server - requests version number from the server.
+
+!verbose - When toggled displays all subexpressions as they
+           are evaluated by the server.
+
+\\************************************************************//
+
+//**************       Message Formats      ******************\\
+
+Command message format: CMD <ACTION>
+
+<ACTION> symbols: <EXIT> - Sends termination request to the
+                           server. Server responds with
+                           termination message.
+                <SERVER> - Sends version request to server.
+                           Server responds with name and
+                           version.
+               <VERBOSE> - Client side command. When active
+                           it displays subexpressions and
+                           the subexpressions results.
+
+***************************************************************
+
+Evaluation message format: EVAL <OPERATION> INTEGER-:-INTEGER
+
+<OPERATION> symbols: <ADD> - When read by the server, the
+                             server preforms addition on
+                             the two integers.
+                     <SUB> - When read by the server, the
+                             server preforms subtraction on
+                             the two integers.
+                    <PROD> - When read by the server, the
+                             server preforms multiplication
+                             on the two integers.
+                     <DIV> - When read by the server, the
+                             server preforms division on
+                             the two integers.
+                     <MOD> - When read by the server, the
+                             server preforms modular division
+                             on the two integers.
+                     <POW> - When read by the server, the
+                             server preforms a power operation
+                             on the two integers.
+
+INTEGER-:-INTEGER symbol: Two integers split around -:-
+                          to be evaluated by <OPERATION>.
+
+\\***********************************************************//
+

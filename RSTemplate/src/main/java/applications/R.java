@@ -1,0 +1,183 @@
+package applications;
+
+import network.UnreliableNetworkBase;
+import transport.RTransport;
+
+import java.io.IOException;
+import java.net.UnknownHostException;
+
+import static java.lang.Thread.sleep;
+
+/**
+ * Simulates the requester (R) side of the exchange from exam question 2.2. The program requests chunks of data from the
+ * server side, checking each against the expected values. Created by blad on 3/30/15.
+ */
+public class R extends ApplicationBase {
+  /**
+   * distant machine name as a human-readable string
+   */
+  protected String distantMachineName;
+  protected int distantPortNumber;
+  protected long chunkNumber;
+  protected String chunkString;
+
+  protected RTransport transport;
+
+  // the number of chunks to request before terminating successuflly
+  protected static int numberOfRequests;
+
+  // shape of the delay window for chunk requests
+  private static final double minWaitSeconds = 0.25;
+  private static final double waitSpanSeconds = 0.25;
+
+  /**
+   * Construct a new R
+   *
+   * @param distantPortNumber port to find a server on
+   * @param distantMachineName machine to find a server on
+   * @param fileName name of the test data file
+   */
+  private R(int distantPortNumber, String distantMachineName, String fileName) {
+    super(fileName);
+    this.distantPortNumber = distantPortNumber;
+    this.distantMachineName = distantMachineName;
+    openTheFile();
+    this.transport = new RTransport(distantMachineName, distantPortNumber);
+  }
+
+  /**
+   * Parse the command-line arguments and construct an R object with the given settings. This function may not return,
+   * instead ending the program if there is an error processing the command-line.
+   * @param args the command-line arguments
+   * @return an initialized R object
+   */
+  public static R processCommandLine(String[] args) {
+    numberOfRequests = DEFAULT_NUMBER_OF_REQESTS;
+    int distantPortNumber = DEFAULT_S_PORT_NUMBER;
+    String distantMachineName = DEFAULT_S_MACHINE_NAME;
+    String fileName = DEFAULT_FILE;
+    int delayBoundMilliseconds = 1000;
+    double loseChance = 0.10;
+    double corruptPacketChance = 0.00;
+    double corruptByteChance = 0.00;
+
+    /*
+     * Parsing parameters. argNdx will move forward across the indices;
+     * remember for arguments that have their own parameters, you must
+     * advance past the value for the argument too.
+     */
+    int argNdx = 0;
+
+    while (argNdx < args.length) {
+      String curr = args[argNdx];
+
+      if (curr.equals(ARG_DISTANT_PORT)) {
+        ++argNdx;
+
+        String numberStr = args[argNdx];
+        distantPortNumber = Integer.parseInt(numberStr);
+      } else if (curr.equals(ARG_DISTANT_MACHINE)) {
+        ++argNdx;
+        distantMachineName = args[argNdx];
+      } else if (curr.equals(ARG_DELAY)) {
+        ++argNdx;
+        delayBoundMilliseconds = Integer.parseInt(args[argNdx]);
+      } else if (curr.equals(ARG_LOSE)) {
+        ++argNdx;
+        loseChance = Double.parseDouble(args[argNdx]);
+      } else if (curr.equals(ARG_PACKET)) {
+        ++argNdx;
+        corruptPacketChance = Double.parseDouble(args[argNdx]);
+        if (corruptPacketChance < 0.0) corruptPacketChance = 0.0;
+        if (corruptPacketChance > 1.0) corruptPacketChance = 1.0;
+      } else if (curr.equals(ARG_BYTE)) {
+        ++argNdx;
+        corruptByteChance = Double.parseDouble(args[argNdx]);
+        if (corruptByteChance < 0.0) corruptPacketChance = 0.0;
+        if (corruptByteChance > 1.0) corruptPacketChance = 1.0;
+      } else if (curr.equals(ARG_FILE)) {
+        ++argNdx;
+        fileName = args[argNdx];
+      } else if (curr.equals(ARG_NUMBER_OF_REUESTS)) {
+        ++argNdx;
+
+        String numberStr = args[argNdx];
+        numberOfRequests = Integer.parseInt(numberStr);
+      } else {
+        // if there is an unknown parameter, give usage and quit
+        System.err.println("Unknown parameter \"" + curr + "\"");
+        System.exit(1);
+      }
+
+      ++argNdx;
+    }
+    R retVal = new R(distantPortNumber, distantMachineName, fileName);
+    UnreliableNetworkBase net = retVal.transport.getNetwork();
+    net.setDelayBoundMilliseconds(delayBoundMilliseconds);
+    net.setLoseChance(loseChance);
+    net.setCorruptByteChance(corruptByteChance);
+    net.setCorruptPacketChance(corruptPacketChance);
+    return retVal;
+  }
+
+  /**
+   * Run the program by processing the command-line and running the resulting object.
+   * @param args command-line arguments
+   */
+  public static void main(String[] args) {
+    R r = processCommandLine(args);
+    r.run();
+  }
+
+  /**
+   * Request a chunk from the attached server. Generate a random offset into the shared text file. Then fetch the most
+   * data the server might return so we have the data to check against. The make the request to the transport layer
+   * with the offset of the chunk we want. Then reads the responding chunk.
+   *
+   * @return the chunk generated by the server
+   * @throws IOException if there is a problem sending the request or reading the resporse.
+   */
+  public byte[] getChunk() throws IOException {
+    long range = fileLength - MAX_CHUNK;
+    chunkNumber = nextLong(range);
+    String chunkRequestString = String.format("%d", chunkNumber);
+    byte[] expected = new byte[(int) MAX_CHUNK];
+    if (getPrintDebugData())
+      System.out.println("chunkNumber = " + chunkNumber);
+    testFile.seek(chunkNumber);
+    testFile.readFully(expected);
+    chunkString = new String(expected);
+    transport.sendMsg(chunkRequestString.getBytes());
+    return transport.receiveMsg();
+  }
+
+  /**
+   * Run an R, requesting some number of chunks from the server.
+   */
+  public void run() {
+    try {
+      System.out.println(String.format("Connecting to %s:%d", distantMachineName, distantPortNumber));
+      for (int requestNumber = 0; requestNumber < numberOfRequests; ++requestNumber) {
+        if (requestNumber % 10 == 0)
+          System.out.print(".");
+        sleep((int)(random.nextInt((int)(1000 * waitSpanSeconds)) + 1000 * minWaitSeconds));
+        String chunk = new String(getChunk());
+        if (!chunkString.startsWith(chunk)) {
+          String receivedPrefix = chunk.substring(0, 40);
+          String expectedPrefix = chunkString.substring(0, 40);
+          System.err.println("\n----------------------------------------");
+          System.err.println(String.format("Problem with chunk %d", chunkNumber));
+          System.err.println("----------------------------------------");
+          System.err.println(String.format("Expected:\n%s\nGot:\n%s\n", expectedPrefix, receivedPrefix));
+          System.exit(2);
+        }
+      }
+    } catch (UnknownHostException e) {
+      e.printStackTrace();
+    } catch (InterruptedException e) {
+      e.printStackTrace();
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+  }
+}

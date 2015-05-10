@@ -1,0 +1,76 @@
+/*
+ * Name: Hunter Quant
+ * Email: quanthd197@potsdam.edu
+ * Assignment: p005
+ * Edited: 03/15/2015
+ */
+
+package io;
+
+import java.util.Arrays;
+import java.io.InputStream;
+import java.io.IOException;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+
+public class UDPInputStream extends InputStream {
+  
+  /**
+   * Socket for retrieving input.
+   */
+  private DatagramSocket socket;
+  /**
+   * Index for our input buffer.
+   */
+  private int bufferIndex;
+  /**
+   * Buffer for input.
+   */
+  private byte[] buffer;
+
+  public UDPInputStream(DatagramSocket socket) {
+    this.socket = socket;
+    this.bufferIndex = 0;
+    this.buffer = new byte[32];
+  }
+
+  /**
+   * Reads a single character value.
+   */
+  public int read() {
+    //If the buffer is empty, repopulate.
+    if (isBufferEmpty() || bufferIndex >= buffer.length ) fill();
+    System.out.println(bufferIndex);
+    return buffer[bufferIndex++] & 0xff;
+  }
+
+  /**
+   * Fills the buffer if it is empty.
+   */
+  private void fill() {
+    try {
+      buffer = new byte[32];
+      //Create and fill a packet;
+      DatagramPacket pkt = new DatagramPacket(buffer, buffer.length);
+      socket.receive(pkt);
+      //If buffer is empty reset index.
+      bufferIndex = 0;
+      //Move contents to the buffer.
+      buffer = pkt.getData();
+    } catch (IOException ioe) {
+      ioe.printStackTrace();  
+    }
+  }
+  
+  /**
+   * Checks to see if the input buffer is empty.
+   * @return True is buffer is empty else false. 
+   */
+  private boolean isBufferEmpty() {
+    for (byte i : buffer) {
+      System.out.println((char)i);
+      //if (i != 0) return false;
+    }
+    return false;
+  } 
+}
