@@ -1,2 +1,2 @@
 # NetworksStuff
-Just some old Computer Networks stuff.
+Projects for Computer Networks at SUNY Potsdam.
